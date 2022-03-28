@@ -15,15 +15,19 @@
  */
 package io.netty.channel.unix.tests;
 
+import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Socket;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class SocketTest<T extends Socket> {
@@ -95,5 +99,24 @@ public abstract class SocketTest<T extends Socket> {
         final int value = 0x08;
         socket.setTrafficClass(value);
         assertEquals(value, socket.getTrafficClass());
+    }
+
+    @Test
+    public void testIntOpt() throws IOException {
+        socket.setReuseAddress(false);
+        socket.setIntOpt(0xffff, 0x0004, 1);
+        // Anything which is != 0 is considered enabled
+        assertNotEquals(0, socket.getIntOpt(0xffff, 0x0004));
+        socket.setIntOpt(0xffff, 0x0004, 0);
+        // This should be disabled again
+        assertEquals(0, socket.getIntOpt(0xffff, 0x0004));
+    }
+
+    @Test
+    public void testRawOpt() throws IOException {
+        ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(4);
+        buffer.putInt(1).flip();
+        socket.setRawOpt(0xffff, 0x0004, buffer);
+        assertNotEquals(ByteBuffer.allocate(0), socket.getRawOpt(0xffff, 0x0004, 4));
     }
 }
